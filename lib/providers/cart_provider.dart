@@ -4,7 +4,7 @@ import 'package:sabaneo_2/database/db_helper.dart';
 import 'package:sabaneo_2/models/cart_model.dart';
 
 class CartProvider with ChangeNotifier {
-  DBHelper dbHelper = DBHelper();
+  final DBHelper dbHelper = DBHelper();
   int _counter = 0;
   int _quantity = 1;
   int get counter => _counter;
@@ -15,10 +15,19 @@ class CartProvider with ChangeNotifier {
 
   List<Cart> cart = [];
 
+  CartProvider() {
+    loadCartItems();
+  }
+
   Future<List<Cart>> getData() async {
     cart = await dbHelper.getCartList();
     notifyListeners();
     return cart;
+  }
+
+  Future<void> loadCartItems() async {
+    cart = await dbHelper.getCartList();
+    notifyListeners();
   }
 
   void _setPrefsItems() async {

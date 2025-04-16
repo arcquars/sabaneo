@@ -1,11 +1,16 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sabaneo_2/providers/user_provider.dart';
+import 'package:sabaneo_2/services/customer_service.dart';
 import 'package:sabaneo_2/utils/decorations/sabaneo_button_styles.dart';
 import 'package:sabaneo_2/utils/decorations/sabaneo_input_decoration.dart';
+import 'package:sabaneo_2/utils/location_util.dart';
 
 class CustomerCreateScreen extends StatelessWidget {
   const CustomerCreateScreen({
@@ -40,7 +45,10 @@ class CustomerCreateForm extends StatefulWidget {
 }
 
 class _CustomerCreateFormState extends State<CustomerCreateForm> {
+  final CustomerService _customerService = CustomerService();
+
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _codigoController = TextEditingController();
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _nitController = TextEditingController();
   final TextEditingController _representanteLegalController = TextEditingController();
@@ -49,6 +57,13 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
   final TextEditingController _coordenadasController = TextEditingController();
   LatLng? _ubicacion;
   File? _imagenFrontis;
+
+  late UserProvider _userProvider;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   Future<void> _seleccionarUbicacion(BuildContext context) async {
     final result = await Navigator.pushNamed(context, '/mapa_direccion') as LatLng?;
@@ -76,6 +91,7 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
   void _guardarCliente() {
     if (_formKey.currentState!.validate()) {
       // Aquí puedes acceder a los valores de los controladores y _ubicacion y _imagenFrontis
+      debugPrint('Codigo: ${_codigoController.text}');
       debugPrint('Nombre: ${_nombreController.text}');
       debugPrint('NIT: ${_nitController.text}');
       debugPrint('Representante Legal: ${_representanteLegalController.text}');
@@ -83,8 +99,35 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
       debugPrint('Ubicación: $_ubicacion');
       debugPrint('Imagen Frontis: $_imagenFrontis');
 
+      _createCustomer();
       // Lógica para guardar el cliente en tu backend o base de datos
     }
+  }
+
+  Future<String?> pickAndEncodeImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final bytes = await File(image.path).readAsBytes();
+      return base64Encode(bytes);
+    }
+    return null;
+  }
+
+  Future<void> _createCustomer() async {
+    final bytes = await _imagenFrontis!.readAsBytes();
+    await _customerService.createCustomer(
+      _codigoController.text,
+        _nitController.text,
+        _nombreController.text,
+        _telefonoController.text,
+        "TIENDA",
+        _ubicacion.toString(),
+        base64Encode(bytes));
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("✅ Se creo el cliente")),
+    );
   }
 
   @override
@@ -101,14 +144,14 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               TextFormField(
-                controller: _nombreController,
+                controller: _codigoController,
                 decoration: SabaneoInputDecoration.defaultDecoration(
-                  labelText: "Nombre",
-                  hintText: "Ingrese el nombre del cliente"
+                    labelText: "Codigo",
+                    // hintText: "Ingrese el nombre del cliente"
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor, ingresa el nombre del cliente.';
+                    return 'Por favor, ingresa el codigo del cliente.';
                   }
                   return null;
                 },
@@ -123,11 +166,17 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
               ),
               const SizedBox(height: 8.0),
               TextFormField(
-                controller: _representanteLegalController,
+                controller: _nombreController,
                 decoration: SabaneoInputDecoration.defaultDecoration(
-                    labelText: "Representante Legal",
-                    hintText: ""
+                  labelText: "Razon social",
+                  // hintText: "Ingrese el nombre del cliente"
                 ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, ingresa el nombre del cliente.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 8.0),
               TextFormField(
@@ -137,6 +186,14 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
                     hintText: ""
                 ),
                 keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 8.0),
+              TextFormField(
+                controller: _representanteLegalController,
+                decoration: SabaneoInputDecoration.defaultDecoration(
+                    labelText: "Representante Legal",
+                    hintText: ""
+                ),
               ),
               const SizedBox(height: 8.0),
               TextFormField(
@@ -209,39 +266,100 @@ class _MapaDireccionState extends State<MapaDireccion> {
   );
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  Future<Position> obtenerUbicacion() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Verificar si los servicios de ubicación están habilitados
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Los servicios de ubicación están deshabilitados.');
+    }
+
+    // Verificar los permisos de ubicación
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Los permisos de ubicación fueron denegados.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Los permisos de ubicación están denegados permanentemente.');
+    }
+
+    // Obtener la posición actual
+    return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+  }
+
+  Future<CameraPosition> obtenerCameraPosition() async {
+    Position posicion = await obtenerUbicacion();
+    return CameraPosition(
+      target: LatLng(posicion.latitude, posicion.longitude),
+      zoom: 18.0,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Seleccionar Ubicación'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: () {
-              Navigator.pop(context, _selectedLocation);
-            },
-          ),
-        ],
-      ),
-      body: GoogleMap(
-        mapType: MapType.normal,
-        initialCameraPosition: _initialCameraPosition,
-        onMapCreated: (GoogleMapController controller) {
-          _mapController = controller;
-        },
-        onTap: (LatLng location) {
-          setState(() {
-            _selectedLocation = location;
-          });
-        },
-        markers: _selectedLocation == null
-            ? {}
-            : {
-                Marker(
-                  markerId: const MarkerId('selected-location'),
-                  position: _selectedLocation!,
+    return FutureBuilder<CameraPosition>(
+      future: obtenerCameraPosition(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error al obtener la ubicación.'));
+        } else {
+          return Stack(
+              children: [
+                GoogleMap(
+                  mapType: MapType.normal,
+                  initialCameraPosition: snapshot.data!,
+                  // myLocationEnabled: true,
+                  // myLocationButtonEnabled: true,
+                  onMapCreated: (GoogleMapController controller) {
+                    _mapController = controller;
+                  },
+                  onTap: (LatLng location) {
+                    setState(() {
+                      _selectedLocation = location;
+                    });
+                  },
+                  markers: _selectedLocation == null
+                      ? {}
+                      : {
+                    Marker(
+                      markerId: const MarkerId('selected-location'),
+                      position: _selectedLocation!,
+                    ),
+                  },
                 ),
-              },
-      ),
+                // Center(
+                //   child: Icon(Icons.location_pin, size: 50, color: Colors.red),
+                // ),
+                Positioned(
+                  bottom: 20,
+                  left: 20,
+                  right: 20,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Retornar la posición seleccionada al cerrar la pantalla
+                      Navigator.pop(context, _selectedLocation);
+                    },
+                    child: Text('Confirmar ubicación'),
+                  ),
+                ),
+                ]
+          );
+        }
+      },
     );
   }
 }

@@ -12,7 +12,7 @@ class DBHelper {
      return _database!;
    }
    _database = await initDatabase();
-   return null;
+   return _database!;
  }
 
  initDatabase() async {

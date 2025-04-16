@@ -7,6 +7,7 @@ import 'package:sabaneo_2/database/db_helper.dart';
 import 'package:sabaneo_2/login/presentation/view/login_page.dart';
 import 'package:sabaneo_2/models/cart_model.dart';
 import 'package:sabaneo_2/providers/cart_provider.dart';
+import 'package:sabaneo_2/providers/user_provider.dart';
 
 class CartScreen extends StatefulWidget {
   CartScreen({
@@ -21,6 +22,8 @@ class _CartScreenState extends State<CartScreen> {
   DBHelper? dbHelper = DBHelper();
   List<bool> tapped = [];
   String _selectedClientName = '';
+
+  late UserProvider _userProvider;
 
   @override
   void initState() {

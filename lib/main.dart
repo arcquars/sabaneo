@@ -6,6 +6,7 @@ import 'package:sabaneo_2/login/presentation/view/auth_drawer.dart';
 import 'package:sabaneo_2/models/caracteristica_model.dart';
 import 'package:sabaneo_2/models/cart_model.dart';
 import 'package:sabaneo_2/models/product_model.dart';
+import 'package:sabaneo_2/observers/session_observer.dart';
 import 'package:sabaneo_2/providers/cart_provider.dart';
 import 'package:sabaneo_2/providers/shopping_car_provider.dart';
 import 'package:sabaneo_2/providers/user_provider.dart';
@@ -49,15 +50,20 @@ class MyApp extends StatelessWidget {
   final bool isLoggedIn;
   final String? role;
 
-  const MyApp({super.key, required this.isLoggedIn,this.role});
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  MyApp({super.key, required this.isLoggedIn,this.role});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AppBar con Menú',
       theme: ThemeData(primarySwatch: Colors.blue),
+      navigatorKey: navigatorKey,
+      navigatorObservers: [SessionObserver(navigatorKey)],
       // home: isLoggedIn? HomeScreen(isLoggedIn: isLoggedIn, role: role) : FormLogin(),
-      initialRoute: isLoggedIn? '/home' : '/login',
+      // initialRoute: isLoggedIn? '/home' : '/login',
+      initialRoute: '/home',
       routes: {
         '/login': (context) => FormLogin(),
         '/home': (context) => HomeScreen(isLoggedIn: isLoggedIn, role: role),
@@ -73,10 +79,8 @@ class MyApp extends StatelessWidget {
 class HomeScreen extends StatelessWidget {
   final bool isLoggedIn;
   final String? role;
-
   
-  
-  HomeScreen({super.key, required this.isLoggedIn, this.role});
+  const HomeScreen({super.key, required this.isLoggedIn, this.role});
 
   @override
   Widget build(BuildContext context) {
@@ -90,42 +94,47 @@ class HomeScreen extends StatelessWidget {
             Text('SABANEO'),
           ],
         ),
-        centerTitle: true, // Opcional: Centrar el título
+        centerTitle: true,
+        // Opcional: Centrar el título
         actions: [
           Builder( // 🔥 SOLUCIÓN: Usamos Builder para obtener el context correcto
-            builder: (context) => IconButton(
-              icon: Icon(Icons.menu), // Icono de hamburguesa
-              onPressed: () {
-                Scaffold.of(context).openEndDrawer(); // ✅ Abre el menú lateral derecho
-              },
-            ),
-          ), 
+            builder: (context) =>
+                IconButton(
+                  icon: Icon(Icons.menu), // Icono de hamburguesa
+                  onPressed: () {
+                    Scaffold
+                        .of(context)
+                        .openEndDrawer(); // ✅ Abre el menú lateral derecho
+                  },
+                ),
+          ),
         ],
         leading: badges.Badge(
-            badgeContent: Consumer<CartProvider>(
-              builder: (context, value, child) {
-                return Text(
-                  value.getCounter().toString(),
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                );
-              },
-            ),
-            position: const badges.BadgePosition(start: 30, bottom: 30),
-            child: IconButton(
-              onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => CartScreen()));
-              },
-              icon: const Icon(Icons.shopping_cart),
-            ),
+          badgeContent: Consumer<CartProvider>(
+            builder: (context, value, child) {
+              debugPrint("eeeee::: ${value.getCounter().toString()}");
+              return Text(
+                value.getCounter().toString(),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              );
+            },
           ),
+          position: const badges.BadgePosition(start: 30, bottom: 30),
+          child: IconButton(
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => CartScreen()));
+            },
+            icon: const Icon(Icons.shopping_cart),
+          ),
+        ),
         backgroundColor: Color(0xFFFD7E14),
       ),
       // endDrawer: isLoggedIn? AuthDrawer(userRole: role?? "Vendedor") : GuestDrawer(),
-      endDrawer: AuthDrawer(userRole: role?? "Vendedor"),
+      endDrawer: AuthDrawer(userRole: role ?? "Vendedor"),
 
       // body: isLoggedIn? SalesmanContent() : Center(child: Text('Contenido Principal ${ConfigService.apiBaseUrl}')),
       body: SalesmanContent(),
@@ -146,6 +155,8 @@ class _SalesmanContentStatefulState extends State<SalesmanContent> {
   final TextEditingController _oemController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
   bool _isCheckedSaldo = true;
+
+  late UserProvider _userProvider;
 
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
@@ -234,9 +245,12 @@ class _SalesmanContentStatefulState extends State<SalesmanContent> {
   }
 
   Future<void> getServiceCaracteristicas() async {
-    _caracteristicas =  await _storeService.getCaracteristica();
-    //controladores = _caracteristicas.map((dato) => TextEditingController(text: dato.idcaracteristica)).toList();
-    controladores = _caracteristicas.map((dato) => TextEditingController(text: "")).toList();
+    try{
+      _caracteristicas =  await _storeService.getCaracteristica();
+      controladores = _caracteristicas.map((dato) => TextEditingController(text: "")).toList();
+    } on Exception catch (e){
+      _caracteristicas = [];
+    }
   }
 
 
@@ -515,173 +529,179 @@ class _SalesmanContentStatefulState extends State<SalesmanContent> {
       ),
       builder: (BuildContext context) {
         return Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min, // Ajusta la altura al contenido
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Center(
-                child: Text(
-                    'Busqueda',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xfffd7e14)),
-                    textAlign: TextAlign.center,
-                    
-                  ),
-              ),
-              SizedBox(height: 10),
-              Row(
+          // padding: const EdgeInsets.all(8.0),
+          padding: MediaQuery.of(context).viewInsets,
+          child: SingleChildScrollView(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // Ajusta la altura al contenido
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        TextField(
-                          controller: _codigoController,
-                          decoration: SabaneoInputDecoration.defaultDecoration(
-                              labelText: "Codigo",
-                              hintText: ""
-                          ),
-                        ),
-                      ],
+                  Center(
+                    child: Text(
+                      'Busqueda',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xfffd7e14)),
+                      textAlign: TextAlign.center,
+
                     ),
                   ),
-                  Expanded(
-                    child: Row(
-                      children: <Widget>[
-                        Checkbox(
-                          value: _isCheckedSaldo,
-                          onChanged: (bool? newValue) {
-                            setState(() {
-                              _isCheckedSaldo = newValue ?? false;
-                              
-                            });
-                          },
+                  SizedBox(height: 10),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            TextField(
+                              controller: _codigoController,
+                              decoration: SabaneoInputDecoration.defaultDecoration(
+                                  labelText: "Codigo",
+                                  hintText: ""
+                              ),
+                            ),
+                          ],
                         ),
-                        Text('Saldo'),
-                      ],
-                    )
+                      ),
+                      Expanded(
+                          child: Row(
+                            children: <Widget>[
+                              Checkbox(
+                                value: _isCheckedSaldo,
+                                onChanged: (bool? newValue) {
+                                  setState(() {
+                                    _isCheckedSaldo = newValue ?? false;
+
+                                  });
+                                },
+                              ),
+                              Text('Saldo'),
+                            ],
+                          )
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const SizedBox(height: 4.0),
-                  TextField(
-                    controller: _descripcionController,
-                    decoration: SabaneoInputDecoration.defaultDecoration(
-                        labelText: "Descripcion",
-                        hintText: ""
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 4),
-              Row(
-                children: <Widget>[
-                  // Primera columna
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        TextField(
-                          controller: _marcaController,
-                          decoration: SabaneoInputDecoration.defaultDecoration(
-                              labelText: "Marca",
-                              hintText: ""
-                          ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const SizedBox(height: 4.0),
+                      TextField(
+                        controller: _descripcionController,
+                        decoration: SabaneoInputDecoration.defaultDecoration(
+                            labelText: "Descripcion",
+                            hintText: ""
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 8), // Espacio entre columnas
-                  // Segunda columna
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        TextField(
-                          controller: _oemController,
-                          decoration: SabaneoInputDecoration.defaultDecoration(
-                              labelText: "OEM",
-                              hintText: ""
-                          ),
+                  SizedBox(height: 4),
+                  Row(
+                    children: <Widget>[
+                      // Primera columna
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            TextField(
+                              controller: _marcaController,
+                              decoration: SabaneoInputDecoration.defaultDecoration(
+                                  labelText: "Marca",
+                                  hintText: ""
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      SizedBox(width: 8), // Espacio entre columnas
+                      // Segunda columna
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            TextField(
+                              controller: _oemController,
+                              decoration: SabaneoInputDecoration.defaultDecoration(
+                                  labelText: "OEM",
+                                  hintText: ""
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              SizedBox(height: 4),
-              _caracteristicas.isEmpty?
-               Center(child: CircularProgressIndicator())
-               :  ListView.builder(
+                  SizedBox(height: 4),
+                  _caracteristicas.isEmpty?
+                  Center(child: CircularProgressIndicator())
+                      :  ListView.builder(
                     shrinkWrap: true,
                     physics: NeverScrollableScrollPhysics(),
                     itemCount: _caracteristicas.length,
                     itemBuilder: (context, index) {
                       if(index < paresDeDatos.length){
                         List<Caracteristica> parActual = paresDeDatos[index];
-                          return Row(
-                            children: List.generate(parActual.length, (i) {
-                              int controladorIndex = index * 2 + i;
-                              return Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4.0),
-                                  child: TextField(
-                                    controller: controladores[controladorIndex],
-                                    decoration: SabaneoInputDecoration.defaultDecoration(
-                                        labelText: _caracteristicas[controladorIndex].nombre,
-                                        hintText: ""
-                                    ),
+                        return Row(
+                          children: List.generate(parActual.length, (i) {
+                            int controladorIndex = index * 2 + i;
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: TextField(
+                                  controller: controladores[controladorIndex],
+                                  decoration: SabaneoInputDecoration.defaultDecoration(
+                                      labelText: _caracteristicas[controladorIndex].nombre,
+                                      hintText: ""
                                   ),
                                 ),
-                              );
-                            }),
-                          );
+                              ),
+                            );
+                          }),
+                        );
                       }
-                      
+
                     },
                   )
                   ,
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  ElevatedButton(
-                    onPressed: () {
-                      // Acción al presionar el botón
-                      Navigator.pop(context);
-                      _codigoController.text = "";
-                      _marcaController.text = "";
-                      _oemController.text = "";
-                      _descripcionController.text = "";
-                      _isCheckedSaldo = false;
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      ElevatedButton(
+                        onPressed: () {
+                          // Acción al presionar el botón
+                          Navigator.pop(context);
+                          _codigoController.text = "";
+                          _marcaController.text = "";
+                          _oemController.text = "";
+                          _descripcionController.text = "";
+                          _isCheckedSaldo = false;
 
-                      for (var controlador in controladores) {
-                        controlador.text = "";
-                      }
-                      _search(false);
-                    },
-                    style: SabaneoButtonStyles.primaryButtonStyle(),
-                    child: Text('Limpiar filtros'),
+                          for (var controlador in controladores) {
+                            controlador.text = "";
+                          }
+                          _search(false);
+                        },
+                        style: SabaneoButtonStyles.primaryButtonStyle(),
+                        child: Text('Limpiar filtros'),
+                      ),
+                      SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Acción al presionar el botón
+                          Navigator.pop(context);
+                          _currentPage = 1;
+
+                          _search(false);
+                        },
+                        style: SabaneoButtonStyles.primaryButtonStyle(),
+                        child: Text('Buscar'),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Acción al presionar el botón
-                      Navigator.pop(context);
-                      _currentPage = 1;
-                      
-                      _search(false);
-                    },
-                    style: SabaneoButtonStyles.primaryButtonStyle(),
-                    child: Text('Buscar'),
-                  ),    
                 ],
               ),
-            ],
-          ),
+            )
+          )
         );
       },
     );

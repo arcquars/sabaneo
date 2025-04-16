@@ -7,12 +7,12 @@ class UserProvider extends ChangeNotifier {
   String? _name;
   String? _username;
   String? _role;
-  bool? _isLoggedIn = false;
+  bool _isLoggedIn = false;
 
   String? get name => _name;
   String? get username => _username;
   String? get role => _role;
-  bool? get isLoggedIn => _isLoggedIn;
+  bool get isLoggedIn => _isLoggedIn;
 
   // ✅ Cargar sesión desde SharedPreferences
   Future<void> loadUserSession() async {
@@ -25,21 +25,36 @@ class UserProvider extends ChangeNotifier {
       final UserService userService = UserService();
       final User? user = await userService.getUser();
       if(user != null){
+        _isLoggedIn = true;
         login(user.name, user.username, user.email, user.role);
-
-        _name = prefs.getString('name');
-        _username = prefs.getString('username');
-        _role = prefs.getString('role');
-        _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-        notifyListeners(); // 🔄 Notifica cambios a la UI
+        // _name = prefs.getString('name');
+        // _username = prefs.getString('username');
+        // _role = prefs.getString('role');
+        // _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
       } else {
-        prefs.clear();
-        prefs.setBool("isLoggedIn", false);
+        // prefs.clear();
+        // prefs.setBool("isLoggedIn", false);
+        logout();
       }
-    } 
+    }
+  }
 
+  Future<bool> isUserSession() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isLoggedIn1 = prefs.getBool('isLoggedIn') ?? false;
 
-    
+    debugPrint("Dentro de UserProvider - loadUserSession::: $isLoggedIn1");
+    // Actualizar datos del usuario
+    if(isLoggedIn1){
+      final UserService userService = UserService();
+      final User? user = await userService.getUser();
+      if(user != null){
+        login(user.name, user.username, user.email, user.role);
+        return true;
+      }
+    }
+    logout();
+    return false;
   }
 
   // ✅ Guardar sesión después del login

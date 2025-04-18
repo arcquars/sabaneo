@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sabaneo_2/models/customer_type_model.dart';
 import 'package:sabaneo_2/providers/user_provider.dart';
 import 'package:sabaneo_2/services/customer_service.dart';
 import 'package:sabaneo_2/utils/decorations/sabaneo_button_styles.dart';
@@ -60,9 +61,31 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
 
   late UserProvider _userProvider;
 
+  List<CustomerTypeModel> _customerTypes = [];
+  CustomerTypeModel? _customerTypeSelection;
+  bool _loading = true;
+
   @override
   void initState() {
     super.initState();
+    _loadCustomerTypes();
+
+  }
+
+  void _loadCustomerTypes() async {
+    try {
+      final types = await _customerService.getCustomerTypes();
+      setState(() {
+        _customerTypes = types;
+        _customerTypeSelection = types.isNotEmpty ? types.first : null;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+      });
+      // Manejo de errores, por ejemplo, mostrar un mensaje al usuario
+    }
   }
 
   Future<void> _seleccionarUbicacion(BuildContext context) async {
@@ -98,6 +121,7 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
       debugPrint('Teléfono: ${_telefonoController.text}');
       debugPrint('Ubicación: $_ubicacion');
       debugPrint('Imagen Frontis: $_imagenFrontis');
+      debugPrint('Tipo de cliente: ${_customerTypeSelection?.nombre}');
 
       _createCustomer();
       // Lógica para guardar el cliente en tu backend o base de datos
@@ -121,7 +145,7 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
         _nitController.text,
         _nombreController.text,
         _telefonoController.text,
-        "TIENDA",
+        _customerTypeSelection!.idsubcatcliente,
         _ubicacion.toString(),
         base64Encode(bytes));
     Navigator.pop(context);
@@ -132,10 +156,10 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
 
   @override
   Widget build(BuildContext context) {
+    if(_loading){
+      return CircularProgressIndicator();
+    }
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('Crear Nuevo Cliente'),
-      // ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -146,8 +170,8 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
               TextFormField(
                 controller: _codigoController,
                 decoration: SabaneoInputDecoration.defaultDecoration(
-                    labelText: "Codigo",
-                    // hintText: "Ingrese el nombre del cliente"
+                  labelText: "Codigo",
+                  // hintText: "Ingrese el nombre del cliente"
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -224,6 +248,27 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
                 },
               ),
               const SizedBox(height: 8.0),
+              DropdownButtonFormField<CustomerTypeModel>(
+                value: _customerTypeSelection,
+                items: _customerTypes.map((tipo) {
+                  return DropdownMenuItem<CustomerTypeModel>(
+                    value: tipo,
+                    child: Text(tipo.nombre),
+                  );
+                }).toList(),
+                onChanged: (nuevoTipo) {
+                  debugPrint("eeee:: $nuevoTipo");
+                  _customerTypeSelection = nuevoTipo;
+                  setState(() {
+                    // _customerTypeSelection = nuevoTipo;
+                  });
+                },
+                decoration: InputDecoration(
+                  labelText: 'Tipo de cliente',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8.0),
               ElevatedButton.icon(
                 icon: const Icon(Icons.camera_alt),
                 label: const Text('Tomar Foto del Frontis'),
@@ -260,7 +305,9 @@ class MapaDireccion extends StatefulWidget {
 class _MapaDireccionState extends State<MapaDireccion> {
   GoogleMapController? _mapController;
   LatLng? _selectedLocation;
-  static const CameraPosition _initialCameraPosition = CameraPosition(
+  Position? _position;
+  bool _loading = true;
+  CameraPosition _initialCameraPosition = CameraPosition(
     target: LatLng(-17.3936, -66.1571), // Cochabamba como ubicación inicial
     zoom: 12.0,
   );
@@ -268,16 +315,18 @@ class _MapaDireccionState extends State<MapaDireccion> {
   @override
   void initState() {
     super.initState();
+    _obtenerUbicacion();
   }
 
-  Future<Position> obtenerUbicacion() async {
+  void _obtenerUbicacion() async {
+    debugPrint("sssss:: ");
     bool serviceEnabled;
     LocationPermission permission;
 
     // Verificar si los servicios de ubicación están habilitados
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return Future.error('Los servicios de ubicación están deshabilitados.');
+      debugPrint('Los servicios de ubicación están deshabilitados.');
     }
 
     // Verificar los permisos de ubicación
@@ -285,81 +334,74 @@ class _MapaDireccionState extends State<MapaDireccion> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        return Future.error('Los permisos de ubicación fueron denegados.');
+        debugPrint('Los permisos de ubicación fueron denegados.');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      return Future.error(
-          'Los permisos de ubicación están denegados permanentemente.');
+      debugPrint('Los permisos de ubicación están denegados permanentemente.');
     }
+    _position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    setState(() {
+      _initialCameraPosition = CameraPosition(
+        target: LatLng(_position!.latitude, _position!.longitude),
+        zoom: 18.0,
+      );
+      _loading = false;
+    });
 
-    // Obtener la posición actual
-    return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
   }
 
-  Future<CameraPosition> obtenerCameraPosition() async {
-    Position posicion = await obtenerUbicacion();
-    return CameraPosition(
-      target: LatLng(posicion.latitude, posicion.longitude),
-      zoom: 18.0,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<CameraPosition>(
-      future: obtenerCameraPosition(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error al obtener la ubicación.'));
-        } else {
-          return Stack(
-              children: [
-                GoogleMap(
-                  mapType: MapType.normal,
-                  initialCameraPosition: snapshot.data!,
-                  // myLocationEnabled: true,
-                  // myLocationButtonEnabled: true,
-                  onMapCreated: (GoogleMapController controller) {
-                    _mapController = controller;
-                  },
-                  onTap: (LatLng location) {
-                    setState(() {
-                      _selectedLocation = location;
-                    });
-                  },
-                  markers: _selectedLocation == null
-                      ? {}
-                      : {
-                    Marker(
-                      markerId: const MarkerId('selected-location'),
-                      position: _selectedLocation!,
-                    ),
-                  },
-                ),
-                // Center(
-                //   child: Icon(Icons.location_pin, size: 50, color: Colors.red),
-                // ),
-                Positioned(
-                  bottom: 20,
-                  left: 20,
-                  right: 20,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Retornar la posición seleccionada al cerrar la pantalla
-                      Navigator.pop(context, _selectedLocation);
-                    },
-                    child: Text('Confirmar ubicación'),
-                  ),
-                ),
-                ]
-          );
-        }
-      },
+    if(_loading){
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    return Stack(
+        children: [
+          GoogleMap(
+            mapType: MapType.normal,
+            initialCameraPosition: _initialCameraPosition,
+            // myLocationEnabled: true,
+            // myLocationButtonEnabled: true,
+            onMapCreated: (GoogleMapController controller) {
+              _mapController = controller;
+            },
+            onTap: (LatLng location) {
+              setState(() {
+                _selectedLocation = location;
+              });
+            },
+            markers: _selectedLocation == null
+                ? {}
+                : {
+              Marker(
+                markerId: const MarkerId('selected-location'),
+                position: _selectedLocation!,
+              ),
+            },
+          ),
+          // Center(
+          //   child: Icon(Icons.location_pin, size: 50, color: Colors.red),
+          // ),
+          Positioned(
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: ElevatedButton(
+              onPressed: () {
+                // Retornar la posición seleccionada al cerrar la pantalla
+                Navigator.pop(context, _selectedLocation);
+              },
+              child: Text('Confirmar ubicación'),
+            ),
+          ),
+        ]
     );
   }
 }

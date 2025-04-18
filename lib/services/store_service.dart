@@ -144,7 +144,6 @@ class StoreService extends BaseService {
         }
       );
 
-      debugPrint("eeeppoo:: $response");
       if(response.data['error'] != "false"){
         var res = response.data['caracteristicaM'];
         List<Caracteristica> caracteristicas = (res as List)

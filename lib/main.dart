@@ -19,6 +19,7 @@ import 'package:sabaneo_2/utils/decorations/sabaneo_input_decoration.dart';
 import 'package:sabaneo_2/views/cart_screen.dart';
 import 'package:sabaneo_2/views/customer_create_screen.dart';
 import 'package:sabaneo_2/views/customer_list_screen.dart';
+import 'package:sabaneo_2/views/customer_view_screen.dart';
 import 'package:sabaneo_2/views/sales_route_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -70,6 +71,7 @@ class MyApp extends StatelessWidget {
         '/sales-route': (context) => SalesRouteScreen(),
         '/customer-list': (context) => CustomerListScreen(),
         '/customer-create': (context) => CustomerCreateScreen(),
+        '/customer-view': (context) => CustomerViewScreen(),
         '/mapa_direccion': (context) => const MapaDireccion()
       },
     );
@@ -87,24 +89,23 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Row(
-          mainAxisSize: MainAxisSize.min, // Ajusta el tamaño al contenido
+          mainAxisSize: MainAxisSize.min,
           children: [
-            FaIcon(FontAwesomeIcons.store), // Icono a la izquierda
-            SizedBox(width: 8), // Espaciado entre icono y texto
-            Text('SABANEO'),
+            FaIcon(FontAwesomeIcons.store),
+            SizedBox(width: 8),
+            Text(ConfigService.appName),
           ],
         ),
         centerTitle: true,
-        // Opcional: Centrar el título
         actions: [
-          Builder( // 🔥 SOLUCIÓN: Usamos Builder para obtener el context correcto
+          Builder(
             builder: (context) =>
                 IconButton(
-                  icon: Icon(Icons.menu), // Icono de hamburguesa
+                  icon: Icon(Icons.menu),
                   onPressed: () {
                     Scaffold
                         .of(context)
-                        .openEndDrawer(); // ✅ Abre el menú lateral derecho
+                        .openEndDrawer();
                   },
                 ),
           ),
@@ -112,7 +113,6 @@ class HomeScreen extends StatelessWidget {
         leading: badges.Badge(
           badgeContent: Consumer<CartProvider>(
             builder: (context, value, child) {
-              debugPrint("eeeee::: ${value.getCounter().toString()}");
               return Text(
                 value.getCounter().toString(),
                 style: const TextStyle(
@@ -571,7 +571,6 @@ class _SalesmanContentStatefulState extends State<SalesmanContent> {
                                 onChanged: (bool? newValue) {
                                   setState(() {
                                     _isCheckedSaldo = newValue ?? false;
-
                                   });
                                 },
                               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:sabaneo_2/services/config_service.dart';
 
 part "text_field_general.dart";
 
@@ -16,7 +17,7 @@ class LoginPage extends StatelessWidget {
           children: [
             FaIcon(FontAwesomeIcons.store), // Icono a la izquierda
             SizedBox(width: 8), // Espaciado entre icono y texto
-            Text('SABANEO'),
+            Text(ConfigService.appName),
           ],
         ),
         centerTitle: true, // Opcional: Centrar el título

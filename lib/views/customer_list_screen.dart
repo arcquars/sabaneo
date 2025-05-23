@@ -4,6 +4,7 @@ import 'package:sabaneo_2/models/customer_model.dart';
 import 'package:sabaneo_2/services/customer_service.dart';
 import 'package:sabaneo_2/utils/decorations/sabaneo_button_styles.dart';
 import 'package:sabaneo_2/utils/decorations/sabaneo_input_decoration.dart';
+import 'package:sabaneo_2/views/customer_view_screen.dart';
 
 class CustomerListScreen extends StatelessWidget {
   const CustomerListScreen({
@@ -178,6 +179,7 @@ class _CustomerListContentStatefulState extends State<CustomerListContent> {
                       return GestureDetector(
                         onTap: () {
                           debugPrint("xxxxx: ${customer.idcliente}");
+                          Navigator.pushNamed(context, "/customer-view", arguments: customer.idcliente);
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -201,11 +203,11 @@ class _CustomerListContentStatefulState extends State<CustomerListContent> {
                                     ),
                                     const SizedBox(height: 5.0),
                                     SizedBox(
-                                      height: customer.codigo.length > 50? 50 : 25,
+                                      height: customer.codigo!.length > 50? 50 : 25,
                                       child: SingleChildScrollView(
                                         child: Column(
                                           children: [
-                                            Text(customer.codigo.length > 50? "${customer.codigo.substring(0,50)}..." : customer.codigo),
+                                            Text(customer.codigo!.length > 50? "${customer.codigo!.substring(0,50)}..." : customer.codigo!),
                                           ],
                                         ),
                                       ),

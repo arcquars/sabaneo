@@ -11,17 +11,46 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerService extends BaseService {
 
-  Future<void> createCustomer(String codigo, String nit, String razonSocial, String telefono, String tipoCliente, String coordenadas, String imageFile) async {
+  Future<String> createCustomer(
+      String idcliente,
+      String idpersona,
+      String codigo,
+      String documentType,
+      String nit,
+      String complemento,
+      String razonSocial,
+      String telefono,
+      String direccion,
+      String representantelegal,
+      String tipoCliente,
+      String latitud,
+      String longitud,
+      String imageFile) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final idusuario = prefs.getString('idusuario');
+    final empresa = prefs.getString('empresa');
+
     debugPrint("Reee createCustomer::: $imageFile");
     final data = {
-      "idcliente": "nuevo",
+      "idcliente": idcliente,
+      "idpersona": idpersona,
       "codigo": codigo,
+      "tipo_documento": documentType,
+      "complemento": complemento,
       "nit": nit,
       "razonSocial": razonSocial,
       "celular": telefono,
+      "direccion": direccion,
+      "representantelegal": representantelegal,
       "tipocliente": tipoCliente,
-      "coordenadas": coordenadas,
+      "latitud": latitud,
+      "longitud": longitud,
       'image': imageFile,
+      "token": token,
+      "empresa": empresa,
+      "idusuario": idusuario,
+      'funcion': 'txSaveUpdateClienteApp',
     };
     try {
       Response response = await dio.post(
@@ -30,19 +59,27 @@ class CustomerService extends BaseService {
         options: Options(
           headers: {
             // "Accept": "application/json",
-            "Content-Type": "application/json",
-          }, responseType: ResponseType.plain
+            // "Content-Type": "application/json",
+          },
+            // responseType: ResponseType.plain,
+            responseType: ResponseType.plain
         ),
       );
 //
-      if (response.statusCode == 200) {
-        debugPrint("Imagen subida con éxito: ${response.data}");
-      } else {
-        debugPrint("Error al subir la imagen: ${response.statusCode}");
-      }
+      debugPrint("Imagen subida con éxito 0: ${data}");
+      debugPrint("Imagen subida con éxito 1: ${response}");
+      return response.toString();
+      // if (response.statusCode == 200) {
+      //   debugPrint("Imagen subida con éxito: ${response}");
+      //   return response.toString();
+      // } else {
+      //   debugPrint("Error al subir la imagen: ${response.statusCode}");
+      //   throw Exception("Error al crear:: ${response.data}");
+      // }
 
     } on DioException catch (e) {
       debugPrint("Error CustomerService -> createCustomer -> ${e.error}");
+      return e.error.toString();
     }
   }
 
@@ -62,13 +99,13 @@ class CustomerService extends BaseService {
 
     filters.addEntries(propEntries);
 
-    debugPrint("filtros:: $filters");
+    debugPrint("filtros 1:: $filters");
     try {
       Response response = await postRequest(
           "/ClienteApp.php",
           filters
       );
-
+      debugPrint("filtros 2:: $response");
       if(response.data['error'] != "false"){
         var res = response.data['resultado'];
         List<CustomerModel> customers = (res as List)
@@ -84,8 +121,44 @@ class CustomerService extends BaseService {
       }
 
     } on DioException catch (e) {
-      debugPrint("Error StoreService -> getProducts -> $e");
-      throw Exception('Error al cargar productos');
+      debugPrint("Error StoreService -> getCustomers -> ${e.error}");
+      throw Exception('Error al cargar clientes');
+    }
+  }
+
+  Future<CustomerModel?> getCustomer(Map<String, String> filters) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final idusuario = prefs.getString('idusuario');
+    final empresa = prefs.getString('empresa');
+
+    List<MapEntry<String, String>> propEntries = [];
+    propEntries.add(MapEntry("idusuario", idusuario!));
+    propEntries.add(MapEntry("empresa", empresa!));
+    propEntries.add(MapEntry("funcion", "findClienteByIdClienteApp"));
+    propEntries.add(MapEntry("token", token!));
+
+    filters.addEntries(propEntries);
+
+    debugPrint("filtros getCustomer:: $filters");
+    try {
+      Response response = await postRequest(
+          "/ClienteApp.php",
+          filters
+      );
+      debugPrint("Cliente 5550: ${response.data}");
+      if(response.data['error'] != "false"){
+        var res = response.data['resultado'];
+        CustomerModel customer = CustomerModel.fromJson(res);
+        return customer;
+      } else {
+        debugPrint("else::: $response");
+        return null;
+      }
+
+    } on DioException catch (e) {
+      debugPrint("Error CustomerService -> getCustomer -> $e");
+      throw Exception('Error al cargar Customer');
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:sabaneo_2/main.dart';
 import 'package:sabaneo_2/models/store_model.dart';
 import 'package:sabaneo_2/models/user_register_model.dart';
+import 'package:sabaneo_2/services/config_service.dart';
 import 'package:sabaneo_2/services/store_service.dart';
 import 'package:sabaneo_2/services/user_service.dart';
 import 'package:sabaneo_2/utils/sabaneo_input_decoration.dart';
@@ -66,7 +67,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               FaIcon(FontAwesomeIcons.store), // Icono a la izquierda
               SizedBox(width: 8), // Espaciado entre icono y texto
-              Text('SABANEO'),
+              Text(ConfigService.appName),
             ],
           ),
           centerTitle: true, // Opcional: Centrar el título

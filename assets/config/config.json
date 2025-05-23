@@ -1,6 +1,13 @@
 {
     "api_base_url": "https://selkisbolivia.com/api",
-    "app_name": "SABANEO",
-    "version": "1.0.0"
+    "app_name": "TEST PDM",
+    "version": "1.0.0",
+    "document_type": [
+        {"id": "1", "name": "CI - CEDULA DE IDENTIDAD"},
+        {"id": "2", "name": "CEX - CEDULA DE IDENTIDAD DE EXTRANJERO"},
+        {"id": "3", "name": "PAS - PASAPORTE"},
+        {"id": "4", "name": "OD - OTRO DOCUMENTO DE IDENTIDAD"},
+        {"id": "5", "name": "NIT - NÚMERO DE IDENTIFICACIÓN TRIBUTARIA"}
+    ]
 }
   

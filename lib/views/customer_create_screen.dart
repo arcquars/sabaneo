@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -8,6 +9,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sabaneo_2/models/customer_type_model.dart';
 import 'package:sabaneo_2/providers/user_provider.dart';
+import 'package:sabaneo_2/services/config_service.dart';
 import 'package:sabaneo_2/services/customer_service.dart';
 import 'package:sabaneo_2/utils/decorations/sabaneo_button_styles.dart';
 import 'package:sabaneo_2/utils/decorations/sabaneo_input_decoration.dart';
@@ -52,22 +54,26 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
   final TextEditingController _codigoController = TextEditingController();
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _nitController = TextEditingController();
+  final TextEditingController _complementoController = TextEditingController();
   final TextEditingController _representanteLegalController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
   final TextEditingController _direccionController = TextEditingController();
   final TextEditingController _coordenadasController = TextEditingController();
   LatLng? _ubicacion;
   File? _imagenFrontis;
+  List<dynamic>? _documentTypes;
 
   late UserProvider _userProvider;
 
   List<CustomerTypeModel> _customerTypes = [];
   CustomerTypeModel? _customerTypeSelection;
+  String? _documentTypeSelection;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    _documentTypes = ConfigService.documentTypes;
     _loadCustomerTypes();
 
   }
@@ -123,6 +129,9 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
       debugPrint('Imagen Frontis: $_imagenFrontis');
       debugPrint('Tipo de cliente: ${_customerTypeSelection?.nombre}');
 
+      setState(() {
+        _loading = true;
+      });
       _createCustomer();
       // Lógica para guardar el cliente en tu backend o base de datos
     }
@@ -140,24 +149,47 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
 
   Future<void> _createCustomer() async {
     final bytes = await _imagenFrontis!.readAsBytes();
-    await _customerService.createCustomer(
-      _codigoController.text,
-        _nitController.text,
-        _nombreController.text,
-        _telefonoController.text,
-        _customerTypeSelection!.idsubcatcliente,
-        _ubicacion.toString(),
-        base64Encode(bytes));
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("✅ Se creo el cliente")),
-    );
+    try{
+      var resultado = await _customerService.createCustomer(
+          'nuevo',
+          'nuevo',
+          _codigoController.text,
+          _documentTypeSelection!,
+          _nitController.text,
+          _complementoController.text,
+          _nombreController.text,
+          _telefonoController.text,
+          _direccionController.text,
+          _representanteLegalController.text,
+          _customerTypeSelection!.idsubcatcliente,
+          _ubicacion!.latitude.toString(),
+          _ubicacion!.longitude.toString(),
+          base64Encode(bytes));
+      // Navigator.pop(context);
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text(resultado)
+      //   ),
+      // );
+      setState(() {
+        _loading = false;
+      });
+      mostrarAlertaSimple(context, resultado);
+    } on Exception catch(e){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$e")),
+      );
+    }
+
   }
 
   @override
   Widget build(BuildContext context) {
     if(_loading){
-      return CircularProgressIndicator();
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
     return Scaffold(
       body: SingleChildScrollView(
@@ -181,12 +213,76 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
                 },
               ),
               const SizedBox(height: 8.0),
-              TextFormField(
-                controller: _nitController,
-                decoration: SabaneoInputDecoration.defaultDecoration(
-                    labelText: "NIT",
-                    hintText: "Ingrese el NIT cliente"
+              DropdownButtonFormField<String>(
+                value: _documentTypeSelection,
+                items: _documentTypes?.map((tipo) {
+                  debugPrint("dddd: $tipo");
+                  return DropdownMenuItem<String>(
+                    value: tipo['id'],
+                    child: Text(
+                      tipo['name'].toString(),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (nuevoTipo) {
+                  _documentTypeSelection = nuevoTipo;
+                  setState(() {
+                    // _customerTypeSelection = nuevoTipo;
+                  });
+                },
+                decoration: InputDecoration(
+                  labelText: 'Tipo de documento',
+                  border: OutlineInputBorder(),
                 ),
+                validator: (value) {
+                  if (_documentTypeSelection == null || value == null || value.isEmpty) {
+                    return 'Por favor, selecciona El tipo de documento.';
+                  }
+                  return null;
+                }
+              ),
+              const SizedBox(height: 8.0),
+              Row(
+                  children: <Widget>[
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: _nitController,
+                              decoration: SabaneoInputDecoration.defaultDecoration(
+                                  labelText: "Documento",
+                                  hintText: "Ingrese el dato del documento"
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Por favor, ingrese el numero de documento.';
+                                }
+                                return null;
+                              }
+                            ),
+                          ]
+                      ),
+                    ),
+                    const SizedBox(width: 10.0),
+                    Expanded(
+                      flex: 1,
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: _complementoController,
+                              decoration: SabaneoInputDecoration.defaultDecoration(
+                                  labelText: "Compl",
+                                  hintText: "Compl"
+                              ),
+                            ),
+                          ]
+                      ),
+                    ),
+                  ]
               ),
               const SizedBox(height: 8.0),
               TextFormField(
@@ -293,6 +389,26 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
       ),
     );
   }
+
+  void mostrarAlertaSimple(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Alerta'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class MapaDireccion extends StatefulWidget {
@@ -307,6 +423,9 @@ class _MapaDireccionState extends State<MapaDireccion> {
   LatLng? _selectedLocation;
   Position? _position;
   bool _loading = true;
+
+  bool _isInitialized= false;
+
   CameraPosition _initialCameraPosition = CameraPosition(
     target: LatLng(-17.3936, -66.1571), // Cochabamba como ubicación inicial
     zoom: 12.0,
@@ -315,10 +434,27 @@ class _MapaDireccionState extends State<MapaDireccion> {
   @override
   void initState() {
     super.initState();
-    _obtenerUbicacion();
   }
 
-  void _obtenerUbicacion() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      bool hasUbicacion = false;
+      final route = ModalRoute.of(context);
+      if (route != null && route.settings.arguments != null) {
+        final arguments = route.settings.arguments as Map<String, dynamic>;
+        // _position = Position(longitude: arguments['longitude'], latitude: arguments['latitude']);
+        _obtenerUbicacion(arguments);
+        _isInitialized = true;
+      } else {
+        _obtenerUbicacion(null);
+      }
+
+    }
+  }
+
+  void _obtenerUbicacion(Map<String, dynamic>? posLatLon) async {
     debugPrint("sssss:: ");
     bool serviceEnabled;
     LocationPermission permission;
@@ -341,10 +477,24 @@ class _MapaDireccionState extends State<MapaDireccion> {
     if (permission == LocationPermission.deniedForever) {
       debugPrint('Los permisos de ubicación están denegados permanentemente.');
     }
-    _position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+
+    double latitude = 0;
+    double longitude = 0;
+    if (posLatLon == null){
+      _position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      latitude = _position!.latitude;
+      longitude = _position!.longitude;
+      _selectedLocation = LatLng(latitude, longitude);
+    } else {
+      debugPrint("eeee latitud::: ${posLatLon['latitude']}");
+      latitude = double.parse(posLatLon['latitude'] as String);
+      longitude = double.parse(posLatLon['longitude'] as String);
+
+      _selectedLocation = LatLng(latitude, longitude);
+    }
     setState(() {
       _initialCameraPosition = CameraPosition(
-        target: LatLng(_position!.latitude, _position!.longitude),
+        target: LatLng(latitude, longitude),
         zoom: 18.0,
       );
       _loading = false;

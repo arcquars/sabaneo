@@ -36,7 +36,7 @@ class CustomerService extends BaseService {
       "idcliente": idcliente,
       "idpersona": idpersona,
       "codigo": codigo,
-      "tipo_documento": documentType,
+      "tipodoc": documentType,
       "complemento": complemento,
       "nit": nit,
       "razonSocial": razonSocial,
@@ -61,25 +61,23 @@ class CustomerService extends BaseService {
             // "Accept": "application/json",
             // "Content-Type": "application/json",
           },
-            // responseType: ResponseType.plain,
-            responseType: ResponseType.plain
+            // responseType: ResponseType.plain
         ),
       );
-//
       debugPrint("Imagen subida con éxito 0: ${data}");
-      debugPrint("Imagen subida con éxito 1: ${response}");
-      return response.toString();
-      // if (response.statusCode == 200) {
-      //   debugPrint("Imagen subida con éxito: ${response}");
-      //   return response.toString();
-      // } else {
-      //   debugPrint("Error al subir la imagen: ${response.statusCode}");
-      //   throw Exception("Error al crear:: ${response.data}");
-      // }
-
+      debugPrint("Imagen subida con éxito 0.2: ${response}");
+      final errorTest = response.data['error'];
+      if (errorTest != 'true') {
+        debugPrint("Imagen subida con éxito 1: IF");
+        return response.data['mensaje'];
+      } else {
+        debugPrint("Imagen subida con éxito 2: ELSE");
+        throw Exception("${response.data['mensaje']}");
+      }
     } on DioException catch (e) {
-      debugPrint("Error CustomerService -> createCustomer -> ${e.error}");
-      return e.error.toString();
+      debugPrint("Imagen subida con éxito 3:");
+      // return e.error.toString();
+      throw Exception("${e.error.toString()}");
     }
   }
 

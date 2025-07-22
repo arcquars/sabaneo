@@ -173,11 +173,16 @@ class _CustomerCreateFormState extends State<CustomerCreateForm> {
       setState(() {
         _loading = false;
       });
-      mostrarAlertaSimple(context, resultado);
-    } on Exception catch(e){
+      // mostrarAlertaSimple(context, resultado);
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("$e")),
+        SnackBar(content: Text("$resultado")),
       );
+    } on Exception catch(e){
+      mostrarAlertaSimple(context, "${e.toString()}");
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text("$e")),
+      // );
     }
 
   }

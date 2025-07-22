@@ -5,6 +5,7 @@ import 'package:sabaneo_2/login/presentation/form/form_login.dart';
 import 'package:sabaneo_2/login/presentation/view/auth_drawer.dart';
 import 'package:sabaneo_2/models/caracteristica_model.dart';
 import 'package:sabaneo_2/models/cart_model.dart';
+import 'package:sabaneo_2/models/item_model.dart';
 import 'package:sabaneo_2/models/product_model.dart';
 import 'package:sabaneo_2/observers/session_observer.dart';
 import 'package:sabaneo_2/providers/cart_provider.dart';
@@ -170,6 +171,13 @@ class _SalesmanContentStatefulState extends State<SalesmanContent> {
   List<Caracteristica> _caracteristicas = [];
   List<TextEditingController> controladores = [];
 
+  String? _selectedSaldo;
+  final List<Item> _saldos = [
+    Item(id: "0", name: "TODOS"),
+    Item(id: "1", name: "Saldo Almacen"),
+    Item(id: "2", name: "Saldo Empresa")
+  ];
+
   final DBHelper dbHelper = DBHelper();
   
   @override
@@ -213,7 +221,8 @@ class _SalesmanContentStatefulState extends State<SalesmanContent> {
       "marca": _marcaController.text,
       "oem": _oemController.text,
       "descripcion": _descripcionController.text,
-      "saldo": _isCheckedSaldo.toString(),
+      // "saldo": _isCheckedSaldo.toString(),
+      "saldo": _selectedSaldo!,
       "idcar": idCar,
       "nomcar": nomCar,
       "start": start.toString(),
@@ -548,6 +557,7 @@ class _SalesmanContentStatefulState extends State<SalesmanContent> {
                   ),
                   SizedBox(height: 10),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
                       Expanded(
                         child: Column(
@@ -564,19 +574,35 @@ class _SalesmanContentStatefulState extends State<SalesmanContent> {
                         ),
                       ),
                       Expanded(
-                          child: Row(
-                            children: <Widget>[
-                              Checkbox(
-                                value: _isCheckedSaldo,
-                                onChanged: (bool? newValue) {
-                                  setState(() {
-                                    _isCheckedSaldo = newValue ?? false;
-                                  });
-                                },
-                              ),
-                              Text('Saldo'),
-                            ],
-                          )
+                        child: Column(
+                          mainAxisSize: MainAxisSize.max,
+                          children: <Widget>[
+                            DropdownButton<String>(
+                              // El valor actual seleccionado. Debe ser null si no hay ninguno.
+                              value: _selectedSaldo,
+                              hint: const Text('Por favor selecciona un saldo'), // Texto cuando no hay selección
+                              icon: const Icon(Icons.arrow_drop_down), // Icono de la flecha
+                              iconSize: 24,
+                              elevation: 16,
+                              style: const TextStyle(color: Colors.deepPurple, fontSize: 16),
+                              onChanged: (String? newValue) {
+                                debugPrint("xxxx pdm 1:: $newValue ");
+                                setState(() {
+                                  _selectedSaldo = newValue; // Actualiza el estado con el nuevo valor
+                                  _descripcionController.clear();
+                                  debugPrint("xxxx pdm 2:: $_selectedSaldo ");
+                                });
+                              },
+                              items: _saldos.map<DropdownMenuItem<String>>((Item value) {
+                                // Mapea la lista de Strings a DropdownMenuItem
+                                return DropdownMenuItem<String>(
+                                  value: value.id, // El valor real de la opción
+                                  child: Text(value.name), // El texto visible de la opción
+                                );
+                              }).toList(), // Convierte el iterable a una lista
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

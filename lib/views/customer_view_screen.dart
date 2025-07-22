@@ -70,7 +70,7 @@ class _CustomerViewContentStatefulState extends State<CustomerViewContent> {
   CustomerTypeModel? _customerTypeSelection;
   String? _documentTypeSelection;
   bool _loading = true;
-
+  bool _isButtonEnabled = true;
   CustomerModel? _customerEdit;
   @override
   void initState() {
@@ -109,6 +109,11 @@ class _CustomerViewContentStatefulState extends State<CustomerViewContent> {
         _idpersona = _customerEdit!.idpersona;
         _codigoController.text = _customerEdit!.codigo!;
         _documentTypeSelection = _customerEdit!.tipodoc;
+        if(_customerEdit!.tipodoc == '0'){
+          _documentTypeSelection = "1";
+        } else {
+          _documentTypeSelection = _customerEdit!.tipodoc;
+        }
         _nombreController.text = _customerEdit!.nombres;
         _telefonoController.text = _customerEdit!.celular!;
         _direccionController.text = _customerEdit!.direccion!;
@@ -184,6 +189,9 @@ class _CustomerViewContentStatefulState extends State<CustomerViewContent> {
   }
 
   Future<void> _createCustomer() async {
+    setState(() {
+      _isButtonEnabled = false;
+    });
     var base64 = "";
     if(_imagenFrontis != null){
       var bytes = await _imagenFrontis!.readAsBytes();
@@ -206,15 +214,16 @@ class _CustomerViewContentStatefulState extends State<CustomerViewContent> {
           _ubicacion!.longitude.toString(),
           base64);
 
-      mostrarAlertaSimple(context, resultado);
-      // Navigator.pop(context);
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(content: Text("$resultado")),
-      // );
-    } on Exception catch(e){
+      // mostrarAlertaSimple(context, resultado);
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("$e")),
+        SnackBar(content: Text("$resultado")),
       );
+    } on Exception catch(e){
+      setState(() {
+        _isButtonEnabled = true;
+      });
+      mostrarAlertaSimple(context, "${e.toString()}");
     }
   }
 
@@ -439,7 +448,7 @@ class _CustomerViewContentStatefulState extends State<CustomerViewContent> {
                 ),
               const SizedBox(height: 24.0),
               ElevatedButton(
-                onPressed: _guardarCliente,
+                onPressed: _isButtonEnabled? _guardarCliente : null,
                 style: SabaneoButtonStyles.secondaryButtonStyle(),
                 child: const Text('Guardar Cliente'),
               ),

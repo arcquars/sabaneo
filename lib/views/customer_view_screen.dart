@@ -223,7 +223,7 @@ class _CustomerViewContentStatefulState extends State<CustomerViewContent> {
       setState(() {
         _isButtonEnabled = true;
       });
-      mostrarAlertaSimple(context, "${e.toString()}");
+      mostrarAlertaSimple(context, e.toString());
     }
   }
 
@@ -432,7 +432,7 @@ class _CustomerViewContentStatefulState extends State<CustomerViewContent> {
                         shape: BoxShape.rectangle, // Forma circular
                         image: DecorationImage(
                           fit: BoxFit.cover,
-                          image: NetworkImage('${_customer_url}'),
+                          image: NetworkImage('$_customer_url'),
                         ),
                         // border: Border.all(
                         //   color: Color(0xff516966), // Color del borde

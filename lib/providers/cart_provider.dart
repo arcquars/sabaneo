@@ -32,9 +32,19 @@ class CartProvider with ChangeNotifier {
 
   void _setPrefsItems() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setInt('cart_items', _counter);
-    prefs.setInt('item_quantity', _quantity);
-    prefs.setDouble('total_price', _totalPrice);
+    if(_counter <= 0){
+      prefs.remove('cart_items');
+      prefs.remove('item_quantity');
+      prefs.remove('total_price');
+      _counter = 0;
+      _quantity = 1;
+      _totalPrice = 0;
+    } else {
+      prefs.setInt('cart_items', _counter);
+      prefs.setInt('item_quantity', _quantity);
+      prefs.setDouble('total_price', _totalPrice);
+    }
+    
     notifyListeners();
   }
 
@@ -65,6 +75,7 @@ class CartProvider with ChangeNotifier {
   void addQuantity(int id) {
     final index = cart.indexWhere((element) => element.id == id);
     cart[index].quantity!.value = cart[index].quantity!.value + 1;
+    dbHelper.updateQuantity(cart[index]);
     _setPrefsItems();
     notifyListeners();
   }
@@ -76,6 +87,7 @@ class CartProvider with ChangeNotifier {
       currentQuantity == 1;
     } else {
       cart[index].quantity!.value = currentQuantity - 1;
+      dbHelper.updateQuantity(cart[index]);
     }
     _setPrefsItems();
     notifyListeners();

@@ -15,6 +15,20 @@ class SabaneoInputDecoration {
     );
   }
 
+  static InputDecoration defaultDecorationMedium({String? labelText, String? hintText}) {
+    return InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        border: const OutlineInputBorder(), // Borde por defecto
+        focusedBorder: const OutlineInputBorder( // Borde cuando está activo
+          borderSide: BorderSide(color: Color(0xffe8a63f), width: 2.0),
+        ),
+        labelStyle: const TextStyle(color: Colors.grey), // Estilo por defecto del label
+        floatingLabelStyle: const TextStyle(color: Color(0xffe8bb3f)), // Estilo del label cuando está activo
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+    );
+  }
+
   static InputDecoration defaultDecorationSuffixIcon({
     String? labelText,
     String? hintText,
